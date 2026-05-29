@@ -1,0 +1,196 @@
+{
+  "scenes": [
+    {
+      "scene_number": 1,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "A stressed stickman office worker with disheveled hair and a worried facial expression.",
+            "action": "Looking at a phone screen showing a zero balance with big red circles."
+          }
+        ],
+        "environment": "Minimalist office desk with scattered papers and a sad-looking piggy bank.",
+        "lighting": "Dim grey lighting with stark red accents on the digital number.",
+        "composition": "Close-up shot on the character's frustrated face.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "narration": "¿Sientes que trabajas todo el mes pero tu cuenta bancaria sigue totalmente en cero?"
+    },
+    {
+      "scene_number": 2,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "The same stickman character looking at a pile of unpaid bills.",
+            "action": "Rubbing his temples in confusion and overwhelm."
+          }
+        ],
+        "environment": "A messy room filled with floating invoice papers.",
+        "lighting": "Cold blue light emphasizing a chaotic atmosphere.",
+        "composition": "Medium shot showing the character surrounded by papers.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "narration": "Es el error más común: gastar todo lo que sobra sin un plan."
+    },
+    {
+      "scene_number": 3,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman character looking at a shopping cart overflowing with useless items.",
+            "action": "Walking past the cart, looking tempted but uncertain."
+          }
+        ],
+        "environment": "A stylized store aisle.",
+        "lighting": "Bright store lighting with yellow highlights.",
+        "composition": "Wide shot of the scene.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "narration": "El dinero invisible desaparece en gastos hormiga y deseos impulsivos."
+    },
+    {
+      "scene_number": 4,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman figure holding a magnifying glass to a tiny coin.",
+            "action": "Trying to piece together fragmented coins."
+          }
+        ],
+        "environment": "A barren, clean white space.",
+        "lighting": "Neutral white light.",
+        "composition": "Extreme close-up on the coin.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "narration": "Pero hoy vamos a cambiar eso para siempre."
+    },
+    {
+      "scene_number": 5,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman standing confidently next to a large, clear pie chart.",
+            "action": "Pointing at the chart with a marker."
+          }
+        ],
+        "environment": "A clean whiteboard background.",
+        "lighting": "Bright, clear studio lighting.",
+        "composition": "Medium shot.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "narration": "Te presento la regla de oro: el método 50, 30 y 20."
+    },
+    {
+      "scene_number": 6,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman holding a bold sign that says 50%.",
+            "action": "Smiling and standing firm."
+          }
+        ],
+        "environment": "Clean workspace background.",
+        "lighting": "Warm glowing light on the sign.",
+        "composition": "Close-up.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "narration": "El 50 por ciento de tus ingresos es para tus necesidades básicas."
+    },
+    {
+      "scene_number": 7,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman interacting with a vibrant shopping bag icon.",
+            "action": "Holding the bag happily."
+          }
+        ],
+        "environment": "Minimalist lifestyle background.",
+        "lighting": "Bright purple and pink highlights.",
+        "composition": "Medium shot.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "narration": "El 30 por ciento es para tus deseos personales y estilo de vida."
+    },
+    {
+      "scene_number": 8,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman putting coins into a glowing piggy bank marked 20%.",
+            "action": "Inserting coins with determination."
+          }
+        ],
+        "environment": "Simple savings vault setting.",
+        "lighting": "Golden glowing light around the piggy bank.",
+        "composition": "Close-up on the saving action.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "narration": "Y el 20 por ciento es sagrado: va directo a tu ahorro."
+    },
+    {
+      "scene_number": 9,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "A robot arm labeled 'Automation' pressing a button.",
+            "action": "Transferring money flows automatically."
+          }
+        ],
+        "environment": "Digital interface background.",
+        "lighting": "Cool blue neon light.",
+        "composition": "Wide shot showing the flow of digital money.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "narration": "Automatiza el 20 por ciento apenas recibas tu sueldo."
+    },
+    {
+      "scene_number": 10,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman relaxing in a chair.",
+            "action": "Looking at a phone with a green 'Success' notification."
+          }
+        ],
+        "environment": "Cozy living room interior.",
+        "lighting": "Soft, calm yellow lighting.",
+        "composition": "Medium shot.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "narration": "Hazlo antes de pagar cualquier otra cuenta."
+    },
+    {
+      "scene_number": 11,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman character wearing a suit and standing on top of a growth chart.",
+            "action": "Looking towards the horizon with confidence."
+          }
+        ],
+        "environment": "A sunrise landscape background.",
+        "lighting": "Warm morning light.",
+        "composition": "Low angle wide shot.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "narration": "Mira cómo tu dinero deja de ser invisible y empieza a crecer."
+    },
+    {
+      "scene_number": 12,
+      "image_prompt": {
+        "subjects": [
+          {
+            "description": "Stickman pointing directly at the camera with an encouraging expression.",
+            "action": "Encouraging the viewer to start today."
+          }
+        ],
+        "environment": "Clean white background with bold text elements.",
+        "lighting": "Bright, energetic light.",
+        "composition": "Close-up, head and shoulders.",
+        "style": "Dynamic hand-drawn 2D webcomic sketch style, thick expressive black ink outlines, vibrant minimalist color palette for highlights, clean shading, white background with glowing accents."
+      },
+      "narration": "Tu libertad financiera empieza hoy. ¡Comienza a ahorrar!"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import type { ChangeEvent } from 'react';
 import { browser } from 'wxt/browser';
-import { QueueItem, ScriptData, ScriptScene } from '../../utils/types';
+import type { QueueItem, ScriptData } from '../../utils/types';
 import { parseImagePromptToText } from '../../utils/parser';
 import './App.css';
 
@@ -28,7 +29,7 @@ function App() {
     };
   }, []);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
@@ -37,21 +38,31 @@ function App() {
     reader.onload = (event) => {
       try {
         const json = JSON.parse(event.target?.result as string) as ScriptData;
-        if (!json.scenes || !Array.isArray(json.scenes)) {
-          setError('El archivo JSON no tiene el formato esperado (falta el array "scenes").');
+        if (!json || !Array.isArray(json.scenes) || json.scenes.length === 0) {
+          setError('El archivo JSON no tiene el formato esperado (falta un array "scenes" válido).');
           return;
         }
-        
-        const prepared = json.scenes.map(scene => ({
-          scene_number: scene.scene_number,
-          prompt: parseImagePromptToText(scene.image_prompt)
-        }));
+
+        const prepared = json.scenes.map((scene, index) => {
+          if (!scene || !Number.isFinite(Number(scene.scene_number)) || !scene.image_prompt ||
+              !Array.isArray(scene.image_prompt.subjects) ||
+              typeof scene.image_prompt.environment !== 'string' ||
+              typeof scene.image_prompt.lighting !== 'string' ||
+              typeof scene.image_prompt.composition !== 'string' ||
+              typeof scene.image_prompt.style !== 'string') {
+            throw new Error(`La escena ${index + 1} no tiene un image_prompt válido.`);
+          }
+          return {
+            scene_number: Number(scene.scene_number),
+            prompt: parseImagePromptToText(scene.image_prompt)
+          };
+        });
         
         setParsedScenes(prepared);
         setError('');
       } catch (err) {
         console.error(err);
-        setError('Error al leer el archivo JSON.');
+        setError(err instanceof Error ? err.message : 'Error al leer el archivo JSON.');
       }
     };
     reader.readAsText(file);
@@ -66,8 +77,8 @@ function App() {
     setError('');
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab.id) {
-        setError('Error: No active tab found.');
+      if (!tab?.id || !tab.url || !tab.url.startsWith('https://labs.google/')) {
+        setError('Abre Google Flow en labs.google antes de iniciar la generación.');
         return;
       }
 
@@ -96,6 +107,7 @@ function App() {
       case 'IN_PROGRESS': return '#4285f4';
       case 'DOWNLOADED': return '#34a853';
       case 'ERROR': return '#ea4335';
+      case 'RATE_LIMITED': return '#f29900';
       default: return '#5f6368';
     }
   };
@@ -106,6 +118,7 @@ function App() {
       case 'IN_PROGRESS': return '⚙️';
       case 'DOWNLOADED': return '✅';
       case 'ERROR': return '❌';
+      case 'RATE_LIMITED': return '⏸️';
       default: return '❓';
     }
   };

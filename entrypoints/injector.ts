@@ -1,5 +1,5 @@
 export default defineContentScript({
-  matches: ['*://*.google.com/*', '*://labs.google/*'],
+  matches: ['https://labs.google/*'],
   world: 'MAIN',
   runAt: 'document_start',
   main() {
@@ -8,7 +8,7 @@ export default defineContentScript({
     // --- Fetch interceptor ---
     const _originalFetch = window.fetch;
     window.fetch = async function (...args: Parameters<typeof fetch>) {
-      const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request)?.url ?? '';
+      const url = typeof args[0] === 'string' ? args[0] : args[0] instanceof Request ? args[0].url : String(args[0] ?? '');
 
       // Log every fetch so we can confirm the interceptor is running
       console.log('[FLOW-EXT] fetch:', url.slice(0, 120));
@@ -18,9 +18,7 @@ export default defineContentScript({
       // Intercept tRPC calls on labs.google that may contain batch/media generation info
       if (url.includes('/fx/api/trpc/') || url.includes('batchGenerateImages')) {
         response.clone().text().then((text: string) => {
-          if (!text.includes('batchId') && !text.includes('mediaId')) return;
-          console.log('[FLOW-EXT] response with batch/media info from:', url.slice(0, 120));
-          console.log('[FLOW-EXT] response body (first 500):', text.slice(0, 500));
+          console.log('[FLOW-EXT] generation response detected:', url.slice(0, 120));
           // Try flat JSON first, then NDJSON
           try {
             const data = JSON.parse(text);
@@ -29,7 +27,8 @@ export default defineContentScript({
             text.split('\n').filter(l => l.trim()).forEach(line => {
               try {
                 const data = JSON.parse(line);
-                if (JSON.stringify(data).includes('batchId')) {
+                const serialized = JSON.stringify(data);
+                if (serialized.includes('batchId') || serialized.includes('mediaId') || serialized.includes('workflows')) {
                   window.postMessage({ type: 'FLOW_BATCH_RESPONSE', data }, '*');
                 }
               } catch {}

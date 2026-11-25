@@ -1,5 +1,5 @@
 import { browser } from 'wxt/browser';
-import { QueueItem } from '../utils/types';
+import type { QueueItem } from '../utils/types';
 
 const MAX_CONCURRENT = 3;
 const IMAGES_PER_SCENE = 2;        // Flow generates this many images per prompt
@@ -18,24 +18,6 @@ const mediaIdToScene = new Map<string, { sceneNumber: number; imageIndex: number
 
 export default defineBackground(() => {
   console.log('Flow Background Queue Orchestrator Started');
-
-  // Register the MAIN-world injector script (WXT doesn't add it to the manifest automatically)
-  chrome.scripting.registerContentScripts([{
-    id: 'flow-injector',
-    matches: ['*://*.google.com/*', '*://labs.google/*'],
-    js: ['injector.js'],
-    world: 'MAIN',
-    runAt: 'document_start',
-  }]).catch(() => {
-    // Already registered from a previous session — update it
-    chrome.scripting.updateContentScripts([{
-      id: 'flow-injector',
-      matches: ['*://*.google.com/*', '*://labs.google/*'],
-      js: ['injector.js'],
-      world: 'MAIN',
-      runAt: 'document_start',
-    }]).catch(e => console.error('[INJECTOR] update failed:', e));
-  });
 
   browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'GET_QUEUE') {
@@ -64,6 +46,15 @@ export default defineBackground(() => {
     if (message.type === 'CLEAR_QUEUE') {
       queue = [];
       mediaIdToScene.clear();
+      downloadedTileIds.clear();
+      isInitialized = false;
+      isInjecting = false;
+      rateLimitCooldownUntil = 0;
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
+      }
+      activeTabId = null;
       broadcastQueue();
       sendResponse({ success: true });
       return true;
@@ -140,15 +131,15 @@ function handleBatchResponse(raw: any) {
       console.log(`  [BATCH] matched → scene ${target.scene_number}`);
 
       // Count images already mapped for this scene to assign the correct imageIndex
-      const alreadyMapped = [...mediaIdToScene.values()]
-        .filter(v => v.sceneNumber === target.scene_number).length;
+      let nextImageIndex = [...mediaIdToScene.values()]
+        .filter(v => v.sceneNumber === target.scene_number).length + 1;
 
-      batchMedia.forEach((m: any, idx: number) => {
+      batchMedia.forEach((m: any) => {
         const mediaId: string | undefined = m?.image?.generatedImage?.mediaId ?? m?.name;
         if (mediaId && !mediaIdToScene.has(mediaId)) {
-          const imageIndex = alreadyMapped + idx + 1;
-          mediaIdToScene.set(mediaId, { sceneNumber: target.scene_number, imageIndex });
-          console.log(`    mapped mediaId ${mediaId} → scene ${target.scene_number} img ${imageIndex}`);
+          mediaIdToScene.set(mediaId, { sceneNumber: target.scene_number, imageIndex: nextImageIndex });
+          console.log(`    mapped mediaId ${mediaId} → scene ${target.scene_number} img ${nextImageIndex}`);
+          nextImageIndex += 1;
         }
       });
     }
@@ -174,7 +165,7 @@ async function initializeKnownIdsAndStart(tabId: number) {
   isInitialized = true;
 
   try {
-    const [{ result: initialIds }] = await chrome.scripting.executeScript({
+    const initialResults = await chrome.scripting.executeScript({
       target: { tabId },
       func: () =>
         Array.from(document.querySelectorAll('[data-tile-id]'))
@@ -185,7 +176,8 @@ async function initializeKnownIdsAndStart(tabId: number) {
           .map(el => el.getAttribute('data-tile-id')),
     });
 
-    if (initialIds) {
+    const initialIds = initialResults?.[0]?.result;
+    if (Array.isArray(initialIds)) {
       initialIds.forEach((id: string | null) => { if (id) downloadedTileIds.add(id); });
     }
   } catch (e) {
@@ -198,7 +190,7 @@ async function initializeKnownIdsAndStart(tabId: number) {
 
 async function processQueue() {
   if (isInjecting) return;
-  if (!activeTabId) return;
+  if (activeTabId === null) return;
 
   // Respect rate limit cooldown
   const now = Date.now();
@@ -219,68 +211,93 @@ async function processQueue() {
   broadcastQueue();
 
   try {
-    await chrome.scripting.executeScript({
+    const injectionResults = await chrome.scripting.executeScript({
       target: { tabId: activeTabId },
       world: 'MAIN',
-      func: (promptText) => {
-        const editorDom = document.querySelector<HTMLElement>('[data-slate-editor="true"]');
-        if (!editorDom) return;
+      func: async (promptText) => {
+        // Flow's current generation composer is a ProseMirror textbox. The old
+        // data-slate-editor selector no longer exists on the current Flow UI.
+        const editorDom = document.querySelector<HTMLElement>(
+          '[role="textbox"][contenteditable="true"][aria-label="What do you want to create?"]'
+        );
+
+        if (!editorDom) {
+          return {
+            success: false,
+            error: 'Google Flow generation prompt editor was not found. Open a Flow project and make sure the "What do you want to create?" field is visible.',
+          };
+        }
+
         editorDom.focus();
 
-        const leaf = editorDom.querySelector('[data-slate-leaf="true"]') || editorDom;
-        const sel = window.getSelection();
+        const selection = window.getSelection();
         const range = document.createRange();
-        range.selectNodeContents(leaf);
+        range.selectNodeContents(editorDom);
         range.collapse(false);
-        if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+        selection?.removeAllRanges();
+        selection?.addRange(range);
 
-        const beforeInputEvent = new InputEvent('beforeinput', { inputType: 'insertText', data: promptText, bubbles: true, cancelable: true }) as any;
-        beforeInputEvent.getTargetRanges = () => [range];
+        const beforeInputEvent = new InputEvent('beforeinput', {
+          inputType: 'insertText',
+          data: promptText,
+          bubbles: true,
+          cancelable: true,
+        });
         editorDom.dispatchEvent(beforeInputEvent);
 
         if (!beforeInputEvent.defaultPrevented) {
           document.execCommand('insertText', false, promptText);
-          editorDom.dispatchEvent(new Event('input', { bubbles: true }));
+          editorDom.dispatchEvent(new InputEvent('input', {
+            inputType: 'insertText',
+            data: promptText,
+            bubbles: true,
+          }));
         }
 
-        setTimeout(() => {
-          const buttons = Array.from(document.querySelectorAll('button'));
-          const sendButton = buttons.find(b => {
-            const icon = b.querySelector('i.google-symbols');
-            return icon && icon.textContent?.trim() === 'arrow_forward';
-          });
+        // Allow Flow to update its composer state before submitting.
+        await new Promise(resolve => setTimeout(resolve, 800));
 
-          if (sendButton) {
-            sendButton.removeAttribute('disabled');
-            sendButton.removeAttribute('aria-disabled');
-            sendButton.style.pointerEvents = 'auto';
-            sendButton.click();
+        const sendButton = Array.from(document.querySelectorAll('button')).find(button => {
+          const icon = button.querySelector('i.google-symbols');
+          return icon?.textContent?.trim() === 'arrow_forward';
+        });
 
-            const btnReactKey = Object.keys(sendButton).find(k => k.startsWith('__reactProps$'));
-            if (btnReactKey) {
-              const props = (sendButton as any)[btnReactKey];
-              if (props && typeof props.onClick === 'function') {
-                try { props.onClick({ preventDefault: () => {}, stopPropagation: () => {}, nativeEvent: { isTrusted: true } }); } catch {}
-              }
-            }
-          }
+        if (sendButton) {
+          sendButton.click();
+        } else {
+          // Keyboard submission is a fallback for Flow layouts without the
+          // recognizable arrow_forward button.
+          editorDom.dispatchEvent(new KeyboardEvent('keydown', {
+            key: 'Enter',
+            code: 'Enter',
+            keyCode: 13,
+            which: 13,
+            bubbles: true,
+            cancelable: true,
+          }));
+        }
 
-          editorDom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
-
-          const editorReactKey = Object.keys(editorDom).find(k => k.startsWith('__reactProps$'));
-          if (editorReactKey) {
-            const props = (editorDom as any)[editorReactKey];
-            if (props && typeof props.onKeyDown === 'function') {
-              try { props.onKeyDown({ key: 'Enter', code: 'Enter', keyCode: 13, which: 13, preventDefault: () => {}, stopPropagation: () => {}, nativeEvent: { isTrusted: true } }); } catch {}
-            }
-          }
-        }, 800);
+        return { success: true, submittedWithButton: Boolean(sendButton) };
       },
       args: [nextPending.prompt],
     });
 
-    // Small buffer after injection before allowing another one
-    await new Promise(r => setTimeout(r, 2000));
+    const injectionResult = injectionResults?.[0]?.result as
+      | { success?: boolean; error?: string; submittedWithButton?: boolean }
+      | undefined;
+
+    if (!injectionResult?.success) {
+      throw new Error(
+        injectionResult?.error ?? 'Google Flow prompt injection did not complete.'
+      );
+    }
+
+    console.log(
+      `[INJECT] scene ${nextPending.scene_number} prompt inserted; submit button: ${injectionResult.submittedWithButton ? 'found' : 'keyboard fallback'}`
+    );
+
+    // Keep generations sequential to avoid duplicate requests and Flow rate limits.
+    await new Promise(r => setTimeout(r, INJECT_DELAY_MS));
   } catch (e) {
     console.error('[INJECT] error', e);
     nextPending.status = 'ERROR';
@@ -294,7 +311,7 @@ async function processQueue() {
 
 function startPollingIfNeeded() {
   if (pollingInterval) return;
-  if (!activeTabId) return;
+  if (activeTabId === null) return;
 
   pollingInterval = setInterval(async () => {
     const inProgressCount = queue.filter(q => q.status === 'IN_PROGRESS').length;
@@ -304,10 +321,10 @@ function startPollingIfNeeded() {
       return;
     }
 
-    if (!activeTabId) return;
+    if (activeTabId === null) return;
 
     try {
-      const [{ result: scanResult }] = await chrome.scripting.executeScript({
+      const scanResults = await chrome.scripting.executeScript({
         target: { tabId: activeTabId },
         func: () => {
           const tiles: [string, string][] = [];
@@ -333,6 +350,11 @@ function startPollingIfNeeded() {
         },
       });
 
+      const scanResult = scanResults?.[0]?.result;
+      if (!scanResult || !Array.isArray(scanResult.tiles) || !Array.isArray(scanResult.rateLimitTileIds)) {
+        console.warn('[POLL] Flow tab returned no tile scan result.');
+        return;
+      }
       const { tiles: currentTiles, rateLimitTileIds } = scanResult as {
         tiles: [string, string][];
         rateLimitTileIds: string[];
@@ -376,7 +398,9 @@ function startPollingIfNeeded() {
         if (downloadedTileIds.has(tileId)) continue;
         if (uuidFromUrl && downloadedTileIds.has(uuidFromUrl)) continue;
 
-        const mapping = uuidFromUrl ? mediaIdToScene.get(uuidFromUrl) : undefined;
+        // Flow may expose the generated media ID as the tile ID rather than the URL UUID.
+        const mapping = (uuidFromUrl ? mediaIdToScene.get(uuidFromUrl) : undefined)
+          ?? mediaIdToScene.get(tileId);
 
         if (!mapping) {
           console.log(`[POLL] tile ${tileId} | imgSrc: ${imgUrl.slice(0, 100)} | urlUuid: ${uuidFromUrl ?? 'none'} | no mapping yet, waiting`);

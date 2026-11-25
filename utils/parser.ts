@@ -1,4 +1,4 @@
-import { ImagePrompt } from './types';
+import type { ImagePrompt } from './types';
 
 export function parseImagePromptToText(prompt: ImagePrompt): string {
   const subjects = prompt.subjects.map(s => `${s.description} ${s.action}`).join(', ');
